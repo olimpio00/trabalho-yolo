@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+downloads/
+_versao_anterior/
+*.zip
+*.cache
+yolo11n.pt
+yolo11s.pt
+runs/**/last.pt
+runs/exp1_yolo11s_sem_congelar/weights/
+runs/treino_veiculos/weights/

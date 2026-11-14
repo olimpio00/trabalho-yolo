@@ -1,0 +1,118 @@
+{
+  "titulo": "Detecção de Veículos em Imagens de Trânsito com YOLO",
+  "aluno": "Olimpio Junior",
+  "instituicao": "UNIFEG",
+  "data": "Novembro de 2026",
+  "modelo": "YOLO11s",
+  "classes": [
+    "bicicleta",
+    "carro",
+    "moto",
+    "onibus",
+    "caminhao"
+  ],
+  "resumo": "Foi treinado um modelo YOLO11s para localizar e classificar cinco tipos de veículos (bicicleta, carro, moto, ônibus e caminhão) em fotos de trânsito. O dataset tem 384 fotos reais e distintas do COCO 2017, com 1.587 objetos anotados, divididas em 307 para treino e 77 para validação. O treinamento foi feito em GPU (RTX 4060) e, entre os experimentos realizados, o melhor modelo atingiu <b>Precision 0,659, Recall 0,545 e mAP50 0,599</b> na validação. Nas 5 imagens inéditas de ruas brasileiras, o modelo localizou corretamente a maior parte dos carros, motos e ônibus, com erros concentrados em objetos parcialmente encobertos e na distinção entre moto e bicicleta.",
+  "descricao": "O objetivo do projeto é ensinar um modelo de Visão Computacional a reconhecer veículos em imagens de trânsito, desenhando uma caixa delimitadora (bounding box) em volta de cada veículo e informando sua classe e a confiança da detecção. Esse tipo de sistema é a base de aplicações reais como contagem de veículos em vias, estudo de fluxo de tráfego, monitoramento de corredores de ônibus e de ciclovias e fiscalização. Foi usada a arquitetura YOLO (You Only Look Once), que analisa a imagem inteira em uma única passagem pela rede neural e, por isso, é rápida o bastante para funcionar em tempo real. Em vez de usar o modelo pronto, o modelo foi adaptado (<i>fine-tuning</i>) para as cinco classes do projeto, com nomes em português, partindo de pesos pré-treinados.",
+  "dataset": "<b>Nome e origem.</b> Subconjunto de veículos do <b>COCO 2017</b> (Common Objects in Context, conjunto público de detecção de objetos), partição <i>val2017</i>. As anotações foram obtidas já convertidas para o formato YOLO no repositório público da Ultralytics, e as imagens foram baixadas do servidor oficial do COCO (images.cocodataset.org). O script <font name='Courier'>prepare_dataset.py</font> automatiza todo o processo: (1) lê as anotações das 5.000 imagens do val2017; (2) mantém apenas as imagens que contêm bicicleta, carro, moto, ônibus ou caminhão, descartando aquelas em que o veículo é só um ponto ao fundo (caixa menor que 0,4% da imagem), o que resultou em 767 imagens candidatas; (3) sorteia até 90 imagens contendo cada classe, para equilibrar as classes raras (bicicleta, ônibus) com a mais frequente (carro); (4) converte os índices do COCO para os 5 índices do projeto; (5) separa 80% das imagens para treino e 20% para validação.<br/><b>Quantidade total:</b> 384 imagens anotadas (307 treino e 77 validação), com 1.587 objetos marcados. Cada imagem aparece em apenas um dos conjuntos; o script confere isso automaticamente, para evitar que o modelo seja avaliado em fotos que já viu no treino.<br/><b>Classes:</b> 0 = bicicleta, 1 = carro, 2 = moto, 3 = onibus, 4 = caminhao.<br/><b>Imagens inéditas:</b> 5 fotos de ruas brasileiras, separadas na pasta <font name='Courier'>imagens_ineditas/</font>, que não fazem parte do COCO e não participaram do treino nem da validação.",
+  "exemplo_label_arquivo": "dataset/labels/val/000000128051.txt",
+  "exemplo_label": "3 0.451266 0.408292 0.541 0.59775      <- onibus\n4 0.940578 0.584153 0.118844 0.124139   <- caminhao\n4 0.115031 0.582028 0.227531 0.435944   <- caminhao",
+  "treinamento": "Foi utilizado o <b>YOLO11s</b> (versão <i>small</i> da família YOLO11, com 9,4 milhões de parâmetros) com pesos pré-treinados no COCO, o que permite aproveitar o que a rede já sabe sobre formas, bordas e texturas. A última camada (cabeça de detecção) foi substituída por uma nova com 5 classes (no log: <i>Overriding model.yaml nc=80 with nc=5</i>). O treino foi executado na GPU NVIDIA RTX 4060 (CUDA), com imagens de 640 pixels, lote (batch) de 16 imagens e limite de 150 épocas, com <i>early stopping</i> (patience = 40): se o mAP de validação não melhorar por 40 épocas seguidas, o treino é interrompido e o melhor resultado é mantido. No modelo final também foram <b>congeladas as 10 primeiras camadas</b> (freeze = 10), ou seja, o backbone pré-treinado não é alterado e só as camadas finais aprendem. O YOLO aplica automaticamente aumentos de dados (mosaico, espelhamento, variação de cor e escala), e o otimizador foi escolhido automaticamente (AdamW, lr = 0,0011).<br/><b>Épocas executadas:</b> 73 de 150. O early stopping encerrou o treino porque a melhor época foi a <b>33</b> e não houve melhora nas 40 seguintes. O arquivo <b>best.pt</b> (19,2 MB), com os pesos da época 33, foi salvo em <font name='Courier'>runs/treino_veiculos/weights/best.pt</font> e copiado para <font name='Courier'>modelo/best.pt</font>. O treino levou 4 minutos na GPU. Comando utilizado:",
+  "comando_treino": "yolo detect train model=yolo11s.pt data=\"dataset/data.yaml\" epochs=150 imgsz=640 batch=16 \\\n     device=0 patience=40 workers=4 seed=42 freeze=10",
+  "analise_curvas": "<b>Leitura das curvas.</b> As três perdas de treino (<i>box_loss</i>: erro na posição e no tamanho das caixas; <i>cls_loss</i>: erro na classe; <i>dfl_loss</i>: refinamento das bordas) caem de forma contínua ao longo das épocas, o que mostra que o modelo está aprendendo com as imagens de treino. Já as perdas de validação deixam de cair logo nas primeiras épocas e passam a oscilar (val/box_loss entre 1,29 e 1,48), e o mAP50 de validação estabiliza entre 0,55 e 0,60 a partir da época 20. A distância crescente entre as perdas de treino (que continuam caindo) e as de validação (que não melhoram) é o sinal de <b>overfitting</b>: o modelo continua se ajustando às 307 imagens de treino, mas isso não se converte em melhor desempenho em imagens novas. Por isso o early stopping e o uso do best.pt (época 33), e não do last.pt (época 73), são importantes.",
+  "validacao": "A validação foi executada com o best.pt sobre as 77 imagens de validação, que não foram usadas para ajustar os pesos (<font name='Courier'>python validar.py</font>, equivalente a <font name='Courier'>yolo detect val model=modelo/best.pt data=dataset/data.yaml</font>). As métricas foram:",
+  "explicacao_metricas": [
+    "<b>Precision (Precisão) = 0,659.</b> De todas as caixas que o modelo desenhou, quantas estavam realmente certas (lugar e classe corretos). Cerca de 66% das detecções são verdadeiras e 34% são alarmes falsos. Mede o quanto dá para <i>confiar</i> no que o modelo aponta.",
+    "<b>Recall (Revocação) = 0,545.</b> De todos os veículos que realmente existem nas imagens, quantos o modelo encontrou. O modelo achou cerca de 54% dos 264 veículos da validação. Mede o quanto o modelo <i>deixa passar</i>. O recall é a métrica mais fraca do modelo, porque muitos veículos do COCO são pequenos, distantes ou parcialmente escondidos.",
+    "<b>mAP50 = 0,599.</b> <i>Mean Average Precision</i> com IoU de 50%. Para cada classe, calcula-se a área sob a curva Precisão × Recall, variando o limiar de confiança, e depois tira-se a média entre as 5 classes. Uma detecção só conta como acerto se a caixa prevista se sobrepõe pelo menos 50% (IoU ≥ 0,5) à caixa real. É a nota geral de detecção do modelo, de 0 a 1.",
+    "<b>mAP50-95 = 0,371.</b> Mesma ideia, mas tirando a média para exigências de sobreposição de 50% até 95%. É mais rigorosa porque cobra caixas muito bem ajustadas. Fica sempre abaixo do mAP50.",
+    "<b>Por classe:</b> <b>moto</b> teve o melhor mAP50 (0,738) e <b>bicicleta</b> o pior (0,493). Bicicletas são estruturas finas e vazadas, quase sempre com uma pessoa em cima, o que dificulta a delimitação. <b>Ônibus</b> teve o melhor mAP50-95 (0,445), porque são objetos grandes, cujas caixas são fáceis de ajustar com precisão."
+  ],
+  "analise_confusao": "<b>Matriz de confusão.</b> Cada coluna é a classe real e cada linha é a previsão do modelo. A diagonal mostra os acertos: <b>moto 93%</b>, carro 80%, bicicleta 79%, ônibus 62% e <b>caminhão 52%</b>. A confusão mais forte é <b>caminhão real classificado como carro (31%)</b>: picapes, vans e utilitários ficam no limite entre as duas categorias, e no COCO muitas picapes são anotadas como <i>truck</i>. Também há trocas entre <b>ônibus e caminhão</b> (7 a 8%, veículos grandes e retangulares) e <b>bicicleta prevista como moto</b> (9%). A linha <b>background</b> mostra os veículos que o modelo não encontrou: 24% dos ônibus (muitos aparecem cortados ou ao fundo), 14% dos carros e 12% das bicicletas. A coluna background mostra detecções onde não havia objeto anotado (alarmes falsos), que reduzem a Precision.",
+  "ineditas": "O modelo final foi aplicado a 5 fotos de trânsito brasileiro que não fazem parte do COCO e não participaram do treino nem da validação (<font name='Courier'>python predicao.py</font>, conf = 0,25). Nas cinco imagens o YOLO localizou os veículos, desenhou as caixas delimitadoras, identificou a classe e informou a confiança de cada detecção (número ao lado do nome). São imagens de um domínio diferente do treino (ruas do Brasil, modelos de carros nacionais, muitas motos), o que é um bom teste da capacidade de generalização.",
+  "comentarios_ineditas": {
+    "transito_1.png": "<b>Acertos:</b> rua de paralelepípedo com carros estacionados. Os 4 carros mais próximos foram detectados com confiança alta (0,85 a 0,90) e os carros pequenos ao fundo também foram encontrados, com confiança menor (0,27 a 0,57), o esperado para objetos distantes. <b>Erro:</b> um veículo ao fundo à direita foi classificado como <i>caminhão</i> (0,44); pelo tamanho e formato, parece um utilitário/SUV, um caso de fronteira entre as classes.",
+    "transito_2.png": "<b>Acertos:</b> imagem pequena (259×194 px) de uma rua congestionada. O modelo encontrou 18 carros (vários com confiança acima de 0,80) e os 2 ônibus ao fundo (0,81 e 0,76). <b>Limitação:</b> com tantos objetos sobrepostos em baixa resolução, as caixas se sobrepõem e os rótulos ficam pouco legíveis. Algumas caixas de baixa confiança (0,27 a 0,30) podem ser detecções duplicadas.",
+    "transito_3.png": "<b>Melhor resultado.</b> Via congestionada com 29 detecções: dezenas de carros com confiança entre 0,80 e 0,90, a moto no corredor (0,89) e o caminhão-baú à direita (0,73). <b>Erros:</b> alguns carros muito distantes, no topo da imagem, não foram detectados, e há duas detecções de <i>caminhão</i> com baixa confiança (0,30 e 0,34) ao fundo, onde a classe correta é incerta.",
+    "transito_4.png": "<b>Exemplo de falha.</b> O ônibus (0,81) e o carro em primeiro plano (0,93) estão corretos, e várias motos foram encontradas mesmo parcialmente atrás dos pedestres. Porém o modelo marcou <b>bicicletas onde só existem motos</b> (0,26 a 0,68): com as motos encobertas pelas pessoas na faixa, aparecem só as rodas e o guidão, partes parecidas nas duas classes. Também há um <i>caminhão</i> (0,42) sobre carros ao fundo. A <b>oclusão</b> (objetos escondidos atrás de outros) é a maior dificuldade do modelo.",
+    "transito_5.png": "<b>Acertos:</b> as 4 motos em primeiro plano (0,75 a 0,84), os carros, o ônibus amarelo ao fundo (0,92) e a ciclista à direita (bicicleta, 0,79). No primeiro experimento (sem congelar camadas), esse ônibus era classificado como caminhão e as bicicletas não eram detectadas. <b>Erros:</b> a segunda bicicleta, logo atrás da primeira, só foi detectada com confiança baixa (0,34), e há uma segunda detecção de ônibus fraca (0,33)."
+  },
+  "experimentos_intro": "Para melhorar o reconhecimento, o projeto passou por várias versões. A comparação entre elas é a parte mais instrutiva do trabalho:",
+  "experimentos_tabela": [
+    [
+      "Versão",
+      "Configuração",
+      "Épocas",
+      "mAP50 (val.)",
+      "Observação"
+    ],
+    [
+      "V1 (anterior)",
+      "YOLO11n, CPU. COCO128: 20 fotos de veículos triplicadas com espelho e brilho (60 imagens)",
+      "100",
+      "0,950 (falso) / 0,156 (real)",
+      "Validação com cópias das fotos de treino: métrica inflada"
+    ],
+    [
+      "V2",
+      "YOLO11n, CPU. Novo dataset COCO 2017 (384 fotos distintas)",
+      "45 de 80",
+      "~0,42",
+      "Treino interrompido: ~80 s por época na CPU; refeito na GPU"
+    ],
+    [
+      "V3: Exp. 1",
+      "YOLO11s, GPU RTX 4060, todas as camadas treináveis",
+      "97 (melhor: 57)",
+      "0,495",
+      "Overfitting; confundia ônibus com caminhão"
+    ],
+    [
+      "V4: Exp. 2 (final)",
+      "YOLO11s, GPU, freeze = 10 (backbone congelado)",
+      "73 (melhor: 33)",
+      "0,599",
+      "Melhor em todas as classes; ~5 s por época"
+    ]
+  ],
+  "experimentos_analise": [
+    "<b>Vazamento de dados na V1.</b> A primeira versão usava o COCO128, que tem só 20 fotos com veículos. Para atingir as 60 imagens exigidas, cada foto foi copiada três vezes (original, espelhada e escurecida), e a divisão treino/validação foi feita depois disso. Assim, a validação continha versões escurecidas das mesmas fotos do treino, e o mAP50 de 0,95 media apenas a capacidade do modelo de <i>reconhecer fotos que já tinha visto</i>. Quando esse mesmo modelo foi avaliado nas 77 fotos de validação novas, o mAP50 caiu para <b>0,156</b>, e nas imagens inéditas ele classificava quase todos os carros como caminhão. A lição: a separação entre treino e validação deve ser feita por imagem original, <i>antes</i> de qualquer aumento de dados.",
+    "<b>CPU × GPU.</b> Com o PyTorch só-CPU, cada época levava cerca de 80 s; com o PyTorch CUDA na RTX 4060, cerca de 5 s (16 vezes mais rápido). Isso permitiu usar um modelo maior (YOLO11s em vez de YOLO11n) e comparar experimentos.",
+    "<b>Congelar o backbone.</b> Com apenas 307 imagens de treino, deixar todas as camadas treináveis (Exp. 1) fez o modelo \"esquecer\" parte do conhecimento pré-treinado e sofrer overfitting. Congelar as 10 primeiras camadas (Exp. 2) preservou os detectores genéricos de formas e texturas aprendidos em mais de 100 mil imagens, e só as camadas finais se adaptaram às novas classes. O mAP50 subiu de 0,495 para 0,599, o recall de 0,435 para 0,545, e o modelo passou a acertar o ônibus amarelo da imagem inédita 5."
+  ],
+  "questoes": [
+    [
+      "Questão 1. Qual problema foi escolhido e por quê?",
+      "Detectar e classificar veículos (bicicleta, carro, moto, ônibus e caminhão) em imagens de trânsito. Escolhi esse problema porque ele tem aplicação prática direta (contagem de veículos, análise de fluxo, monitoramento de corredores de ônibus e ciclovias, apoio a semáforos inteligentes) e porque há bastante variedade visual entre as classes, com casos fáceis (ônibus, carro) e difíceis (bicicleta, distinção carro × caminhão). Isso permite analisar onde o modelo acerta e onde erra."
+    ],
+    [
+      "Questão 2. Quantas imagens foram utilizadas? Quais classes foram definidas e como as imagens foram obtidas?",
+      "Foram usadas <b>384 imagens anotadas</b>, com 1.587 objetos: 307 imagens para treino e 77 para validação (80/20), além de <b>5 imagens inéditas</b> para o teste final. As classes são <b>bicicleta, carro, moto, ônibus e caminhão</b>. As imagens e anotações vêm do dataset público <b>COCO 2017</b> (partição val2017): o script <font name='Courier'>prepare_dataset.py</font> filtrou as fotos com essas classes, equilibrou a quantidade entre elas e converteu as anotações para o formato YOLO (classe x_centro y_centro largura altura, normalizados entre 0 e 1). As 5 imagens inéditas são fotos de ruas brasileiras, sem relação com o COCO."
+    ],
+    [
+      "Questão 3. Qual modelo YOLO foi utilizado e quantas épocas de treinamento foram executadas?",
+      "O modelo final é o <b>YOLO11s</b> (Ultralytics), com pesos pré-treinados no COCO e as 10 primeiras camadas congeladas. O treinamento foi configurado para até 150 épocas com early stopping (patience 40). Foram executadas <b>73 épocas</b>, e a melhor foi a <b>33</b>, cujos pesos estão no best.pt. No total, somando os experimentos, foram executadas 100 épocas na V1, 45 na V2, 97 no Exp. 1 e 73 no Exp. 2."
+    ],
+    [
+      "Questão 4. Quais valores de Precision, Recall e mAP50 foram obtidos? O que esses indicadores representam?",
+      "<b>Precision = 0,659, Recall = 0,545, mAP50 = 0,599</b> (e mAP50-95 = 0,371). A <b>Precision</b> indica quanto das detecções do modelo estão corretas: cerca de 2 em cada 3 caixas desenhadas são veículos de verdade, da classe certa. O <b>Recall</b> indica quantos dos veículos existentes o modelo encontrou: pouco mais da metade, já que os pequenos e encobertos costumam escapar. O <b>mAP50</b> combina as duas coisas em uma única nota, a média, entre as classes, da área sob a curva precisão × recall, contando como acerto a caixa que cobre pelo menos 50% do objeto real. Os valores são moderados, mas honestos: foram medidos em fotos que o modelo nunca viu e que incluem muitos veículos pequenos e parcialmente escondidos, um cenário difícil até para modelos grandes."
+    ],
+    [
+      "Questão 5. O modelo conseguiu reconhecer corretamente os objetos nas imagens inéditas?",
+      "Sim, na maior parte dos casos. Nas cinco imagens o modelo localizou os veículos com caixas bem ajustadas e classes corretas: carros com confiança de 0,85 a 0,96, motos de 0,75 a 0,89, ônibus de 0,76 a 0,92, a ciclista da imagem 5 (0,79) e o caminhão-baú da imagem 3 (0,73). Os erros aparecem em situações específicas: (a) <b>oclusão</b>, como as motos atrás dos pedestres na imagem 4, marcadas como bicicletas; (b) <b>classes de fronteira</b>, como um SUV/utilitário marcado como caminhão nas imagens 1 e 4; (c) <b>veículos muito pequenos ou distantes</b>, não detectados ou detectados com confiança baixa; (d) <b>baixa resolução</b> na imagem 2, com caixas sobrepostas. Os exemplos estão na Seção 5."
+    ],
+    [
+      "Questão 6. Quais foram as principais dificuldades encontradas? O que poderia ser melhorado?",
+      "<b>Dificuldades:</b> (1) a primeira versão do dataset tinha <b>vazamento de dados</b> (cópias da mesma foto no treino e na validação), o que gerou um mAP50 falso de 0,95; só foi percebido ao testar o modelo em imagens realmente novas, e a correção foi refazer o dataset com fotos distintas. (2) O <b>treino em CPU</b> era lento (~80 s por época); foi resolvido instalando o PyTorch com CUDA para usar a GPU. (3) <b>Overfitting</b> com poucas imagens, amenizado com early stopping e congelamento do backbone. (4) Na prática, os erros do modelo vêm de <b>oclusão</b>, <b>veículos pequenos</b>, <b>classes parecidas</b> (moto × bicicleta, carro/SUV × caminhão) e da <b>diferença de domínio</b> entre o COCO (fotos do mundo todo) e o trânsito brasileiro, com muitas motos e modelos nacionais.<br/><b>Melhorias possíveis:</b> anotar fotos do trânsito brasileiro (câmeras de rua, motos em corredor) para reduzir a diferença de domínio; aumentar o dataset, principalmente para bicicleta e caminhão, que tiveram o pior desempenho; treinar com resolução maior (imgsz 960 ou 1280) para melhorar a detecção de veículos pequenos; definir critérios mais claros para casos de fronteira (picape, van, SUV) ou criar uma classe própria para eles; testar modelos maiores (YOLO11m) e ajustar o limiar de confiança conforme a aplicação: maior para evitar alarmes falsos, menor para não perder veículos."
+    ]
+  ],
+  "conclusao": "O projeto percorreu todas as etapas de um sistema de Visão Computacional: definição do problema, obtenção e anotação dos dados, preparação no formato YOLO, treinamento por transferência de aprendizado, validação com métricas e teste em imagens inéditas. O modelo final reconhece bem carros, motos e ônibus em fotos reais de trânsito brasileiro, com mAP50 de 0,599 em validação honesta. A principal lição foi que <b>a forma de preparar e separar os dados importa mais que o número final</b>: um mAP de 0,95 obtido com vazamento de dados valia menos que um mAP de 0,60 medido corretamente. Também ficou claro como decisões de treinamento (GPU, tamanho do modelo, congelamento de camadas, early stopping) afetam o resultado quando há poucos dados.",
+  "estrutura": "Projeto_Final_YOLO_Olimpio_Junior/\n|-- dataset/              imagens e labels (train/val) + data.yaml\n|-- imagens_ineditas/     5 imagens de teste (fora do treino/validação)\n|-- modelo/best.pt        pesos do modelo final\n|-- resultados/           detecções nas inéditas, métricas (JSON) e capturas do console\n|-- runs/\n|   |-- treino_veiculos/              treino final (gráficos, results.csv, weights)\n|   |-- exp1_yolo11s_sem_congelar/    experimento 1 (comparação)\n|   `-- validacao/                    matriz de confusão e curvas da validação\n|-- prepare_dataset.py, treinamento.py, validar.py, predicao.py\n|-- gerar_print_console.py, gerar_relatorio.py\n|-- treino_log.txt, validacao_log.txt    saída completa do console\n|-- comandos.txt\n|-- README.md, USO_DE_LLM.md   documentação e declaração de uso de LLM\n`-- relatorio.pdf",
+  "uso_llm": [
+    "Conforme orientação do professor, declaro que este trabalho foi desenvolvido com o auxílio de um modelo de linguagem (LLM).",
+    "<b>Ferramenta:</b> Claude Code, assistente de programação da Anthropic, com o modelo <b>Claude Opus 5.5</b>, usado dentro do VS Code em novembro de 2026.",
+    "<b>Para que foi usado:</b> (1) revisar a primeira versão do projeto, quando foi identificado o vazamento de dados entre treino e validação; (2) escrever os scripts Python do projeto (<font name='Courier'>prepare_dataset.py, treinamento.py, validar.py, predicao.py, gerar_print_console.py, gerar_relatorio.py</font>); (3) instalar o PyTorch com CUDA para usar a GPU RTX 4060; (4) executar os treinamentos, a validação e as predições, e comparar os experimentos; (5) redigir o rascunho deste relatório a partir dos resultados obtidos.",
+    "<b>Principais pedidos feitos ao LLM:</b> \"fazer essa última atividade sobre YOLO, treinar ela mais um pouco também e fazer o relatório\"; \"tá usando a CPU e não a GPU, né? Queria usar a GPU pra ir mais rápido e melhor\"; e incluir a declaração de uso de LLM pedida pelo professor.",
+    "<b>Papel do aluno:</b> definição do tema e do escopo, acompanhamento da execução, decisão de treinar na GPU, conferência dos resultados e revisão final do relatório.",
+    "<b>Verificação:</b> todas as métricas, gráficos e imagens deste relatório foram gerados pela execução real dos scripts. A saída completa do console está em <font name='Courier'>treino_log.txt</font> e <font name='Courier'>validacao_log.txt</font>, e tudo pode ser reproduzido com os comandos de <font name='Courier'>comandos.txt</font>. O arquivo <font name='Courier'>USO_DE_LLM.md</font> traz esta mesma declaração."
+  ]
+}

@@ -1,0 +1,47 @@
+PROJETO: Detecção de veículos em imagens de trânsito com YOLO
+Aluno: Olimpio Junior | Disciplina: Inteligência Artificial | UNIFEG
+
+AMBIENTE
+- Windows 11, Python 3.15, Ultralytics 8.4.208
+- PyTorch 2.15.0 com CUDA 13.4 — GPU NVIDIA GeForce RTX 4060 (8 GB)
+
+1) PREPARAÇÃO DO AMBIENTE (PowerShell, dentro da pasta do projeto)
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install --force-reinstall --no-deps torch torchvision --index-url https://download.pytorch.org/whl/cu134
+yolo checks
+
+2) DATASET (baixa as anotações do COCO 2017, filtra veículos e baixa as 384 imagens)
+python prepare_dataset.py
+   -> dataset/images/{train,val}, dataset/labels/{train,val}, dataset/data.yaml
+   -> 307 imagens de treino, 77 de validação, 5 classes: bicicleta, carro, moto, onibus, caminhao
+
+3) TREINAMENTO
+Experimento 1 (YOLO11s, sem congelar camadas) — executado com treinamento.py antes de
+adicionar freeze=10; resultados em runs/exp1_yolo11s_sem_congelar/
+yolo detect train model=yolo11s.pt data="dataset/data.yaml" epochs=150 imgsz=640 batch=16 device=0 patience=40 workers=4 seed=42
+
+Experimento 2 — MODELO FINAL (YOLO11s com as 10 primeiras camadas congeladas)
+yolo detect train model=yolo11s.pt data="dataset/data.yaml" epochs=150 imgsz=640 batch=16 device=0 patience=40 workers=4 seed=42 freeze=10 project="runs" name=treino_veiculos_freeze10
+   (a pasta gerada foi renomeada para runs/treino_veiculos/; o log do console está em treino_log.txt)
+   Equivalente em Python: python treinamento.py
+   Early stopping: 73 épocas executadas, melhor época = 33 -> runs/treino_veiculos/weights/best.pt
+   copy runs\treino_veiculos\weights\best.pt modelo\best.pt
+
+4) VALIDAÇÃO
+python validar.py
+   equivalente: yolo detect val model="modelo/best.pt" data="dataset/data.yaml" imgsz=640
+   -> Precision 0.659 | Recall 0.545 | mAP50 0.599 | mAP50-95 0.371
+   -> resultados/metricas_validacao.json, runs/validacao/ (matriz de confusão, curvas)
+
+5) RECONHECIMENTO NAS 5 IMAGENS INÉDITAS
+python predicao.py
+   equivalente: yolo detect predict model="modelo/best.pt" source="imagens_ineditas" conf=0.25 save=True
+   -> resultados/imagens_ineditas/ e resultados/deteccoes_ineditas.json
+
+6) RELATÓRIO
+python gerar_print_console.py treino_log.txt print_treino_inicio.png "1,3,29-31,131-155" "Terminal - treino"
+python gerar_print_console.py treino_log.txt print_treino_fim.png "416-452" "Terminal - fim do treino"
+python gerar_print_console.py validacao_log.txt print_validacao.png "0-17" "Terminal - validação"
+python gerar_relatorio.py   -> relatorio.pdf

@@ -1,0 +1,10 @@
+path: C:/Users/cesar1993/Documents/Trabalho YOLO/dataset
+train: images/train
+val: images/val
+
+names:
+  0: bicicleta
+  1: carro
+  2: moto
+  3: onibus
+  4: caminhao

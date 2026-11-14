@@ -1,0 +1,18 @@
+Ultralytics 8.4.208  Python-3.15.2 torch-2.15.0+cu134 CUDA:0 (NVIDIA GeForce RTX 4060, 8188MiB)
+YOLO11s summary (fused): 100 layers, 9,414,735 parameters, 0 gradients, 21.4 GFLOPs
+[34m[1mval: [0mFast image access  (ping: 0.1±0.0 ms, read: 1150.0±340.2 MB/s, size: 164.1 KB)
+[K[34m[1mval: [0mScanning C:\Users\cesar1993\Documents\Trabalho YOLO\dataset\labels\val.cache... 77 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 77/77 19.0Mit/s 0.0s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 10% ━─────────── 1/10 12.4s/it 3.7s<1:52[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 20% ━━────────── 2/10 2.7it/s 3.8s<3.0s[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 30% ━━━╸──────── 3/10 4.8it/s 3.9s<1.5s[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 40% ━━━━╸─────── 4/10 6.2it/s 4.1s<1.0s[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 60% ━━━━━━━───── 6/10 8.4it/s 4.2s<0.5s[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 80% ━━━━━━━━━╸── 8/10 9.1it/s 4.4s<0.2s[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 10/10 2.2it/s 4.5s
+                   all         77        264      0.659      0.545      0.599      0.371
+             bicicleta         19         34       0.57      0.529      0.493      0.218
+                 carro         36        110      0.753      0.582      0.617       0.38
+                  moto         21         41      0.637      0.643      0.738        0.4
+                onibus         21         37      0.627      0.514      0.563      0.445
+              caminhao         29         42      0.706      0.457      0.584      0.411
+Speed: 0.8ms preprocess, 5.6ms inference, 0.0ms loss, 1.5ms postprocess per image
+Results saved to [1mC:\Users\cesar1993\Documents\Trabalho YOLO\runs\validacao[0m
+Precision: 0.6586
+Recall:    0.5448
+mAP50:     0.5990
+mAP50-95:  0.3708
+Métricas salvas em C:\Users\cesar1993\Documents\Trabalho YOLO\resultados\metricas_validacao.json
